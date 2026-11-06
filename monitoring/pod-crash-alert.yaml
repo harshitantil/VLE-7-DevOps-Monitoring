@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: vle7-pod-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: vle7.pod.rules
+      rules:
+        - alert: PodCrashLoop
+          expr: kube_pod_container_status_restarts_total > 3
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod is repeatedly restarting"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted more than 3 times."
