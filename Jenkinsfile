@@ -18,7 +18,7 @@ pipeline {
             steps {
                 sh '''
                     docker build -t ${APP_NAME}:${BUILD_NUMBER} app/
-                    minikube image load ${APP_NAME}:${BUILD_NUMBER}
+                    sudo -n /usr/local/bin/vle7-load-image ${APP_NAME}:${BUILD_NUMBER}
                 '''
             }
         }
