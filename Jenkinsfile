@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -8,7 +9,9 @@ pipeline {
 
     stages {
         stage('Checkout') {
-            steps { checkout scm }
+            steps {
+                checkout scm
+            }
         }
 
         stage('Build Docker image') {
@@ -29,17 +32,29 @@ pipeline {
         stage('Deploy to Minikube') {
             steps {
                 sh '''
-                    kubectl apply -f k8s/
-                    kubectl set image deployment/${APP_NAME} ${APP_NAME}=${APP_NAME}:${BUILD_NUMBER} -n ${K8S_NAMESPACE}
-                    kubectl rollout status deployment/${APP_NAME} -n ${K8S_NAMESPACE} --timeout=120s
-                    kubectl get deployment,service,pods -l app=${APP_NAME} -n ${K8S_NAMESPACE}
+                    # Apply the deployment with the image built in this pipeline.
+                    # This avoids creating an intermediate rollout with :local.
+                    sed "s|vle7-demo:local|${APP_NAME}:${BUILD_NUMBER}|g" \
+                        k8s/deployment.yaml | kubectl apply -f -
+
+                    kubectl apply -f k8s/service.yaml
+
+                    kubectl rollout status deployment/${APP_NAME} \
+                        -n ${K8S_NAMESPACE} --timeout=240s
+
+                    kubectl get deployment,service,pods \
+                        -l app=${APP_NAME} -n ${K8S_NAMESPACE}
                 '''
             }
         }
     }
 
     post {
-        success { echo 'VLE-7 deployment completed successfully.' }
-        failure { echo 'Pipeline failed. Check Docker and Kubernetes access from Jenkins.' }
+        success {
+            echo 'VLE-7 deployment completed successfully.'
+        }
+        failure {
+            echo 'Pipeline failed. Check Docker, Minikube image loading and Kubernetes events.'
+        }
     }
 }
